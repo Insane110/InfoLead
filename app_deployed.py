@@ -15,7 +15,7 @@ import os
 import tempfile
 import torch
 
-nest_asyncio.apply()  # Helps with async in Streamlit/loops
+# nest_asyncio.apply()  # Helps with async in Streamlit/loops
 
 st.set_page_config(
     page_title="InfoLead",
@@ -205,3 +205,4 @@ def main():
 if __name__ == "__main__":
 
     main()
+
