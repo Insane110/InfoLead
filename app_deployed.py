@@ -24,7 +24,95 @@ st.set_page_config(
 )
 
 # Your CSS (unchanged)
-st.markdown("""<style> ... </style>""", unsafe_allow_html=True)  # Paste your full CSS here
+st.markdown("""
+<style>
+    .stApp {
+        font-size: 1.1rem;
+    }
+    
+    h1, h2, h3 {
+        font-size: 2.2rem !important;
+    }
+    
+    .stMarkdown h2 {
+        font-size: 2.2rem !important;
+    }
+    
+    .stMarkdown h3 {
+        font-size: 1.6rem !important;
+    }
+    
+    .stMarkdown p, .stMarkdown li {
+        font-size: 1.2rem !important;
+    }
+    
+    label {
+        font-size: 1.15rem !important;
+    }
+    
+    .stTextInput input, .stTextArea textarea {
+        font-size: 1.1rem !important;
+    }
+    
+    .stButton button {
+        font-size: 1.15rem !important;
+        padding: 0.7rem 1.3rem !important;
+    }
+    
+    .stCheckbox label {
+        font-size: 1.15rem !important;
+    }
+    
+    [data-testid="stChatMessageContent"] {
+        font-size: 1.15rem !important;
+    }
+    
+    .caption, small {
+        font-size: 1rem !important;
+    }
+    
+    [data-testid="stFileUploader"] {
+        font-size: 1.1rem !important;
+    }
+    
+    .stSlider label {
+        font-size: 1.15rem !important;
+    }
+    
+    [data-testid="stSidebar"] {
+        font-size: 1.2rem !important;
+    }
+    
+    [data-testid="stSidebar"] h3 {
+        font-size: 1.2rem !important;
+    }
+    
+    [data-testid="stSidebar"] label {
+        font-size: 1.2rem !important;
+    }
+    
+    [data-testid="stSidebar"] .stCheckbox label {
+        font-size: 1.2rem !important;
+    }
+    
+    [data-testid="stSidebar"] .stButton button {
+        font-size: 1.2rem !important;
+        padding: 0.8rem 1.4rem !important;
+    }
+    
+    [data-testid="stSidebar"] input {
+        font-size: 1.2rem !important;
+    }
+    
+    [data-testid="stSidebar"] .stSlider label {
+        font-size: 1.2rem !important;
+    }
+    
+    [data-testid="stSidebar"] [data-testid="stFileUploader"] {
+        font-size: 1.15rem !important;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 if "llm" not in st.session_state:
     # Switch to HuggingFaceLLM for cloud compatibility
@@ -115,4 +203,5 @@ def main():
     pass  # Replace with your full main()
 
 if __name__ == "__main__":
+
     main()
