@@ -1,6 +1,8 @@
 from transformers import BitsAndBytesConfig
 from llama_index.llms.huggingface import HuggingFaceLLM
 from llama_index.llms.ollama import Ollama
+from llama_index.llms.groq import Groq
+import os
 
 REFINEMENT_PROMPT = """
 You are an expert summarizer and refiner. Take the following raw response and refine it to be:
@@ -36,12 +38,18 @@ def output_llm():
     #     generate_kwargs={"temperature": 0.2, "max_new_tokens": 512, "do_sample": True},
     #     device_map="auto" 
     # )
-    llm = Ollama(
-        model="qwen2.5:1.5b",       
-        request_timeout=120.0,
+    # llm = Ollama(
+    #     model="qwen2.5:1.5b",       
+    #     request_timeout=120.0,
+    #     temperature=0.2,
+    #     max_tokens=512,
+    #     context_window=4096,          
+    # )
+    llm = Groq(
+        model="qwen-2.5-32b",
+        api_key=os.environ["GROQ_API_KEY"],
         temperature=0.2,
-        max_tokens=512,
-        context_window=4096,          
+        max_tokens=512
     )
 
     return llm
