@@ -36,7 +36,6 @@ Steps:
 
 Activate it:
 
-**Windows**
 `venv\Scripts\activate`
 
 
