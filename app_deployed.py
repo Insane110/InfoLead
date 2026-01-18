@@ -15,7 +15,7 @@ import os
 import tempfile
 import torch
 
-# nest_asyncio.apply()  # Helps with async in Streamlit/loops
+nest_asyncio.apply()  # Helps with async in Streamlit/loops
 
 st.set_page_config(
     page_title="InfoLead",
@@ -199,10 +199,87 @@ def process_query(user_query, search_internet, search_query, num_results, attach
 
 # main() function unchanged - paste your original main() here
 def main():
-    # ... (your original main code, no changes needed)
-    pass  # Replace with your full main()
+    st.markdown("## 🔍 InfoLead")
+    st.markdown("Ask questions using web search and your documents")
+    st.divider()
+
+    with st.sidebar:
+        st.markdown("### ⚙️ Configuration")
+
+        search_internet = st.checkbox("Search Internet", value=False)
+        search_query = ""
+        num_results = 5
+
+        if search_internet:
+            search_query = st.text_input("Search Query", placeholder="Leave empty to use main query")
+            num_results = st.slider("Number of Results", 1, 10, 5)
+
+        st.divider()
+
+        attach_doc = st.checkbox("Attach Document", value=False)
+        file_path = None
+
+        if attach_doc:
+            uploaded_file = st.file_uploader("Choose a file", type=["pdf", "txt", "docx", "md"])
+            if uploaded_file:
+                suffix = os.path.splitext(uploaded_file.name)[1]
+                with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+                    tmp.write(uploaded_file.getbuffer())
+                    file_path = tmp.name
+                st.success(f"Loaded: {uploaded_file.name}")
+
+        st.divider()
+
+        if st.button("Clear Chat History", use_container_width=True):
+            st.session_state.chat_history = []
+            st.rerun()
+
+    st.subheader("💬 Chat")
+
+    for chat in st.session_state.chat_history:
+        with st.chat_message("user"):
+            st.write(chat["query"])
+        with st.chat_message("assistant"):
+            st.write(chat["response"])
+            c1, c2, c3 = st.columns(3)
+            c1.caption(f"⏱️ {chat['time']:.2f}s")
+            if chat["web_docs"]:
+                c2.caption(f"🌐 Web docs: {chat['web_docs']}")
+            if chat["doc_docs"]:
+                c3.caption(f"📄 File docs: {chat['doc_docs']}")
+
+    user_query = st.chat_input("Ask something...")
+
+    if user_query:
+        with st.chat_message("user"):
+            st.write(user_query)
+
+        start = time.time()
+
+        with st.chat_message("assistant"):
+            final_search_query = search_query or user_query
+            response, web_docs, doc_docs = process_query(
+                user_query, search_internet, final_search_query,
+                num_results, attach_doc, file_path)
+            elapsed = time.time() - start
+            st.write(response)
+            c1, c2, c3 = st.columns(3)
+            c1.caption(f"⏱️ {elapsed:.2f}s")
+            if web_docs:
+                c2.caption(f"🌐 Web docs: {web_docs}")
+            if doc_docs:
+                c3.caption(f"📄 File docs: {doc_docs}")
+
+        st.session_state.chat_history.append({
+            "query": user_query,
+            "response": response,
+            "time": elapsed,
+            "web_docs": web_docs,
+            "doc_docs": doc_docs
+        })
+
+        st.rerun()
+    # pass  # Replace with your full main()
 
 if __name__ == "__main__":
-
     main()
-
