@@ -105,12 +105,15 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+@st.cache_resource
+def load_index():
+    return get_or_create_index()
 
 if "llm" not in st.session_state:
     st.session_state.llm = output_llm()
 
 if "index" not in st.session_state:
-    st.session_state.index, st.session_state.embed_model = get_or_create_index()
+    st.session_state.index, st.session_state.embed_model = load_index()
 
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
