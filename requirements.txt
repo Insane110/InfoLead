@@ -17,3 +17,4 @@ llama-index-llms-ollama
 nest-asyncio
 fastapi
 uvicorn
+llama-index-llms-groq
