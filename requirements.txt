@@ -18,3 +18,4 @@ nest-asyncio
 fastapi
 uvicorn
 llama-index-llms-groq
+llama-index-llms-openai
