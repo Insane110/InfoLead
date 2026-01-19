@@ -2,7 +2,8 @@
 
 This document describes how to run the InfoLead application locally with full functionality.
 
-![Opening Panel](Interface/interface.png)
+<img src="Interface/interface.png" alt="Opening Panel" width="300"/>
+
 
 ![Functionalities](Interface/features.png)
 
