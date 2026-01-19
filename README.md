@@ -3,14 +3,9 @@
 This document describes how to run the InfoLead application locally with full functionality.
 
 <img src="Interface/interface.png" alt="Opening Panel" width="600"/>
-
-
-![Functionalities](Interface/features.png)
-
-![Sub Processes](Interface/subprocess.png)
-
-![Final Output](Interface/final output.png)
-
+<img src="Interface/subprocess.png" alt="Functionalities" width="600"/>
+<img src="Interface/subprocess.png" alt="Sub Processes" width="600"/>
+<img src="Interface/final output.png" alt="Final Output" width="600"/>
 
 ## Step 1: Install Ollama (Local LLM Runtime)
 
