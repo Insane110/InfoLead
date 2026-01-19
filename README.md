@@ -4,6 +4,12 @@ This document describes how to run the InfoLead application locally with full fu
 
 ![Opening Panel](Interface/interface.png)
 
+![Functionalities](Interface/features.png)
+
+![Sub Processes](Interface/subprocess.png)
+
+![Final Output](Interface/final output.png)
+
 
 ## Step 1: Install Ollama (Local LLM Runtime)
 
