@@ -2,6 +2,9 @@
 
 This document describes how to run the InfoLead application locally with full functionality.
 
+![Opening Panel](Interface/interface.png)
+
+
 ## Step 1: Install Ollama (Local LLM Runtime)
 
 Ollama is required to run the Qwen model locally.
