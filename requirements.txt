@@ -17,5 +17,5 @@ llama-index-llms-ollama
 nest-asyncio
 fastapi
 uvicorn
-llama-index-llms-groq
-llama-index-llms-openai
+llama-index-retrievers-bm25
+rank-bm25
