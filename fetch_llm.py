@@ -1,15 +1,24 @@
 from llama_index.llms.ollama import Ollama
 
 REFINEMENT_PROMPT = """
-You are an expert summarizer and refiner. Take the following raw response and refine it to be:
-- Precise: Remove any redundant or irrelevant information.
-- Concise: Shorten while keeping key details.
-- Meaningful: Structure it logically (e.g., use bullet points if helpful, start with a clear answer).
+You are an expert assistant.
+
+Use the provided context to answer the question.
+
+Make the answer:
+- Precise: Remove redundant information.
+- Concise: Keep only key details.
+- Meaningful: Structure logically (use bullet points if helpful).
 - Accurate: Do not add or change facts.
+- Real answer: If answer is not present in context, say:
+"I don't know and this was not in my knowledge base."
 
-Raw response: {raw_response}
+Context:
+{context_str}
 
-Refined output:
+Question:
+{query_str}
+
 """
 
 def output_llm():
