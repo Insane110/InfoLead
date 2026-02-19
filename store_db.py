@@ -10,11 +10,11 @@ from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunct
 def get_or_create_index():
     embed_model = HuggingFaceEmbedding(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
-    embedding_function = SentenceTransformerEmbeddingFunction()
-    # chroma_client = chromadb.PersistentClient(path="./chroma_db")  # Saves to disk
-    chroma_client = chromadb.Client(Settings(anonymized_telemetry=False))
-    chroma_collection = chroma_client.get_or_create_collection("rag_knowledge_base", embedding_function=embedding_function)
-
+    # embedding_function = SentenceTransformerEmbeddingFunction(model_name="sentence-transformers/all-MiniLM-L6-v2")
+    chroma_client = chromadb.PersistentClient(path="./chroma_db")  # Saves to disk
+    # chroma_collection = chroma_client.get_or_create_collection("rag_knowledge_base", embedding_function=embedding_function)
+    chroma_collection = chroma_client.get_or_create_collection("rag_knowledge_base")
+    
     vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
     storage_context = StorageContext.from_defaults(vector_store=vector_store)
 
@@ -28,6 +28,6 @@ def get_or_create_index():
             show_progress=True
         )
 
-    # index.storage_context.persist(persist_dir="./storage_rag_knowledge_base")
+    index.storage_context.persist(persist_dir="./storage_rag_knowledge_base")
 
     return index, embed_model
