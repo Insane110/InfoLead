@@ -4,7 +4,8 @@ from crawl_fastapi import crawl_via_fastapi
 from fetch_urls import fetch_top_n_links
 from docs_parse import parse_document
 from chunk import get_token_nodes
-from store_db import get_or_create_index
+from store_db import get_or_create_index, get_or_create_doc_index 
+from query_cache import is_similar_query_cached, save_query_to_cache, clear_query_cache
 from fetch_llm import output_llm, REFINEMENT_PROMPT
 import os
 import tempfile
@@ -159,6 +160,10 @@ class SimpleBM25Retriever(BaseRetriever):
 def load_index():
     return get_or_create_index()
 
+@st.cache_resource
+def load_reranker():
+    return SentenceTransformerRerank(model="cross-encoder/ms-marco-MiniLM-L-6-v2", top_n=2)
+
 if "llm" not in st.session_state:
     st.session_state.llm = output_llm()
 
@@ -196,30 +201,31 @@ def process_query(user_query, search_internet, search_query, num_results, attach
     web_docs = []
 
     if search_internet and search_query:
-        with st.status("🌐 Searching the internet...", expanded=True):
-            top_links = fetch_top_n_links(search_query, num_results)
-            web_docs = crawl_via_fastapi(top_links)
+        already_cached, matched_query = is_similar_query_cached(search_query)
+        if already_cached:
+            st.info(f"💾 Similar query found in knowledge base: *'{matched_query}'* — skipping web scrape")
+        else:
+            with st.status("🌐 Searching the internet...", expanded=True):
+                top_links = fetch_top_n_links(search_query, num_results)
+                web_docs = crawl_via_fastapi(top_links)
+                save_query_to_cache(search_query)
 
     doc_docs = []
     nodes = None
     if attach_doc and file_path:
         if not st.session_state.doc_inserted:
-            with st.status("📄 Processing document (first time)...", expanded=True):
-                parsed = parse_document(file_path)
-                st.session_state.parsed_docs = parsed
-                st.session_state.current_file_path = file_path
-
-                nodes = get_token_nodes(parsed)
+            doc_index, nodes, cache_hit = get_or_create_doc_index(file_path)
+            label = "📦 Loading cached index (no re-embedding)..." if cache_hit else "📄 Parsing & embedding document (first time)..."
+            with st.status(label, expanded=True):
+                st.session_state.index = doc_index
                 st.session_state.doc_nodes = nodes
+                st.session_state.parsed_docs = nodes 
                 st.session_state.bm25_retriever = SimpleBM25Retriever(nodes=nodes, similarity_top_k=5)
-
-                st.session_state.index.insert_nodes(nodes)
-                st.session_state.index.storage_context.persist()
-
                 st.session_state.doc_inserted = True
                 st.session_state.docs_indexed = True
+                st.session_state["engine_nodes_changed"] = True
 
-            doc_docs = st.session_state.parsed_docs
+            doc_docs = nodes
 
         else:
             st.info("📄 Using previously parsed document")
@@ -233,51 +239,52 @@ def process_query(user_query, search_internet, search_query, num_results, attach
             st.session_state.bm25_retriever = SimpleBM25Retriever(nodes=nodes, similarity_top_k=5)
             # st.session_state.index.storage_context.persist()
 
-    with st.status("🤖 Generating response...", expanded=True):
-        context_query = user_query
-        use_history = st.session_state.get('use_history', True)
-        history_length = st.session_state.get('history_length', 3)
-        
-        if chat_history and use_history:
-            recent_history = chat_history[-history_length:]
-            history_context = "\n\n".join([
-                f"Previous Question: {chat['query']}\nPrevious Answer: {chat['response']}"
-                for chat in recent_history
-            ])
-            context_query = f"""Conversation History:
-{history_context}
+    context_query = user_query
+    use_history = st.session_state.get('use_history', True)
+    history_length = st.session_state.get('history_length', 3)
 
-Current Question: {user_query}
+    if chat_history and use_history:
+        recent_history = chat_history[-history_length:]
+        history_context = "\n\n".join([
+            f"Previous Question: {chat['query']}\nPrevious Answer: {chat['response']}"
+            for chat in recent_history
+        ])
+        context_query = f"""Conversation History:
+    {history_context}
 
-Please answer the current question, taking into account the conversation history above for context."""
-        
-        if nodes:
-            vector_retriever = VectorIndexRetriever(index=st.session_state.index, similarity_top_k=5)
-            # bm25_retriever = BM25Retriever.from_defaults(nodes=nodes, similarity_top_k=5)
-            # bm25_retriever = SimpleBM25Retriever(nodes=nodes, similarity_top_k=5)
-            bm25_retriever = st.session_state.bm25_retriever
-            hybrid_retriever = HybridRetriever(vector_retriever, bm25_retriever)
-            rerank = SentenceTransformerRerank(model="cross-encoder/ms-marco-MiniLM-L-6-v2", top_n=2)
+    Current Question: {user_query}
+
+    Please answer the current question, taking into account the conversation history above for context."""
+
+    if nodes:
+        vector_retriever = VectorIndexRetriever(index=st.session_state.index, similarity_top_k=2)
+        bm25_retriever = st.session_state.bm25_retriever
+        hybrid_retriever = HybridRetriever(vector_retriever, bm25_retriever)
+        engine_key = "query_engine_hybrid"
+        if engine_key not in st.session_state or st.session_state.get("engine_nodes_changed"):
             qa_prompt = PromptTemplate(REFINEMENT_PROMPT)
-            response_synthesizer = get_response_synthesizer(llm=st.session_state.llm, text_qa_template=qa_prompt)
-            query_engine = RetrieverQueryEngine(
-                retriever=hybrid_retriever, 
-                node_postprocessors=[rerank], 
+            response_synthesizer = get_response_synthesizer(
+                llm=st.session_state.llm,
+                text_qa_template=qa_prompt,
+                streaming=True             
+            )
+            st.session_state[engine_key] = RetrieverQueryEngine(
+                retriever=hybrid_retriever,
+                node_postprocessors=[],     # reranker removed for streaming stability
                 response_synthesizer=response_synthesizer
             )
-        else:
-            query_engine = st.session_state.index.as_query_engine(
-                llm=st.session_state.llm,
-                embed_model=st.session_state.embed_model
-            )
+            st.session_state["engine_nodes_changed"] = False
 
-        # final_query = REFINEMENT_PROMPT.format(raw_response=context_query)
-        response = query_engine.query(context_query)
-        # prompt = REFINEMENT_PROMPT.format(raw_response=response.response)
-        # refined_response = st.session_state.llm.complete(prompt).text
-        refined_response = response.response
+        query_engine = st.session_state[engine_key]
+    else:
+        query_engine = st.session_state.index.as_query_engine(
+            llm=st.session_state.llm,
+            embed_model=st.session_state.embed_model,
+            streaming=True                  
+        )
 
-    return refined_response, len(web_docs), len(doc_docs)
+    response = query_engine.query(context_query)
+    return response.response_gen, len(web_docs), len(doc_docs)  
 
 def main():
     st.markdown("## 🔍 InfoLead")
@@ -332,6 +339,7 @@ def main():
         st.divider()
 
         if st.button("🗑️ Clear History", use_container_width=True, key="clear_doc_btn"):
+            clear_query_cache()
             st.session_state.chat_history = []
             st.session_state.parsed_docs = []
             st.session_state.doc_nodes = None
@@ -367,14 +375,20 @@ def main():
             st.write(user_query)
 
         start = time.time()
-
         with st.chat_message("assistant"):
             final_search_query = search_query or user_query
-            response, web_docs, doc_docs = process_query(
+            response_gen, web_docs, doc_docs = process_query(
                 user_query, search_internet, final_search_query,
                 num_results, attach_doc, file_path, st.session_state.chat_history)
+
+            full_response = ""
+            placeholder = st.empty()
+            for token in response_gen:
+                full_response += token
+                placeholder.markdown(full_response + "▌")  
+            placeholder.markdown(full_response)           
+
             elapsed = time.time() - start
-            st.write(response)
             c1, c2, c3 = st.columns(3)
             c1.caption(f"⏱️ {elapsed:.2f}s")
             if web_docs:
@@ -384,7 +398,7 @@ def main():
 
         st.session_state.chat_history.append({
             "query": user_query,
-            "response": response,
+            "response": full_response, 
             "time": elapsed,
             "web_docs": web_docs,
             "doc_docs": doc_docs
