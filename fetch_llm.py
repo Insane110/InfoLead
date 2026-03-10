@@ -26,8 +26,9 @@ def output_llm():
         model="qwen2.5:1.5b",       
         request_timeout=120.0,
         temperature=0.2,
-        max_tokens=512,
-        context_window=4096,          
+        max_tokens=256,
+        context_window=2048,      
+        streaming=True,     
     )
 
     return llm
